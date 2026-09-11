@@ -1,0 +1,65 @@
+# ============================================================
+# CodeGuardian - Docker Compose
+# ============================================================
+# Local-first, AI-powered code security scanner.
+# Uses Ollama running on the HOST machine.
+# ============================================================
+
+services:
+
+  codeguardian:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codeguardian-api
+    image: codeguardian:latest
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      APP_NAME: "CodeGuardian"
+      APP_ENV: "production"
+      APP_VERSION: "0.1.0"
+      DEBUG: "false"
+      HOST: "0.0.0.0"
+      PORT: "8000"
+      OLLAMA_URL: "http://host.docker.internal:11434"
+      MODEL_NAME: "qwen2.5:7b-16k"
+      LLM_TIMEOUT: "120"
+      LLM_MAX_TOKENS: "3000"
+      MAX_FILE_SIZE_MB: "10"
+      LOG_LEVEL: "INFO"
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    volumes:
+      - ./app:/app/app:ro
+      - codeguardian-logs:/app/logs
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - codeguardian-net
+
+volumes:
+  codeguardian-logs:
+    driver: local
+
+networks:
+  codeguardian-net:
+    driver: bridge
